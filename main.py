@@ -15,8 +15,10 @@ class InternetSpeedScraper:
     def load_fast_com(self):
         """Load the fast.com website and wait for the speed to appear."""
         self.driver.get('https://fast.com')
+
+        # Wait for the speed result to update to a non-zero value
         WebDriverWait(self.driver, 60).until(
-            EC.presence_of_element_located((By.ID, "speed-value"))
+            lambda driver: driver.find_element(By.ID, "speed-value").text != "0"
         )
 
     def extract_speed(self):
