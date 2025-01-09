@@ -15,11 +15,13 @@ import subprocess
 import re
 import platform
 import json
+import csv  # Import the csv module
 from datetime import datetime
 import schedule
 import time
 import requests
-import speedtest
+import speedtest  # Correct import for speedtest
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -146,6 +148,17 @@ class InternetSpeedScraper:
             logging.error("Ping command failed.")
         return None, None
 
+def auto_detect_location():
+    """Auto-detect the user's location using IP-based geolocation."""
+    try:
+        response = requests.get('https://ipinfo.io/json')
+        data = response.json()
+        city = data.get('city', 'London')  # Default to London if city is not found
+        return city
+    except Exception as e:
+        logging.error(f"Error detecting location: {e}")
+        return 'London'  # Fallback to a default city
+
 def notify_user(title, message):
     """Send a desktop notification."""
     notification.notify(
@@ -184,6 +197,9 @@ class SpeedTestApp:
         dark_mode_button = ttk.Button(self.frame, text="Dark Mode", command=self.toggle_dark_mode)
         dark_mode_button.pack(pady=(0, 10))
 
+        export_button = ttk.Button(self.frame, text="Export Results", command=self.export_results_to_csv)
+        export_button.pack(pady=(0, 10))
+
         self.schedule_test()
 
     def start_test(self):
@@ -196,11 +212,13 @@ class SpeedTestApp:
         """Run the speed and ping test and update the result in the GUI."""
         scraper = InternetSpeedScraper()
         speed, ping = scraper.get_internet_speed_and_ping()
+        download_speed, upload_speed = scraper.run_speedtest()
+        jitter, packet_loss = scraper.get_ping_with_jitter_and_loss()
         self.progress.stop()
         if speed and ping:
-            self.result_label.config(text=f"Speed: {speed} Mbps, Ping: {ping} ms")
+            self.result_label.config(text=f"Download: {download_speed:.2f} Mbps, Upload: {upload_speed:.2f} Mbps, Ping: {ping} ms, Jitter: {jitter} ms, Packet Loss: {packet_loss:.2f}%")
             scraper.save_result(speed, ping)
-            notify_user("Speed Test Complete", f"Speed: {speed} Mbps, Ping: {ping} ms")
+            notify_user("Speed Test Complete", f"Download: {download_speed:.2f} Mbps, Upload: {upload_speed:.2f} Mbps, Ping: {ping} ms, Jitter: {jitter} ms, Packet Loss: {packet_loss:.2f}%")
         else:
             self.result_label.config(text="Failed to retrieve the internet speed or ping.")
             notify_user("Speed Test Failed", "Could not retrieve the speed or ping.")
@@ -213,8 +231,9 @@ class SpeedTestApp:
         self.style.configure("TLabel", background="black", foreground="white")
         self.style.configure("TButton", background="black", foreground="white")
 
-    def fetch_weather(self, city='Lagos', api_key='128080fedfe76dab7a2507e1de71bdcf'):
+    def fetch_weather(self, city=None, api_key='128080fedfe76dab7a2507e1de71bdcf'):
         """Fetch the current weather for a city."""
+        city = city or auto_detect_location()
         url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
         response = requests.get(url)
         data = response.json()
@@ -227,8 +246,21 @@ class SpeedTestApp:
 
     def update_weather(self):
         """Update the weather information in the GUI."""
-        weather_info = self.fetch_weather()
+        city = auto_detect_location()
+        weather_info = self.fetch_weather(city=city)
         self.weather_label.config(text=weather_info)
+
+    def export_results_to_csv(self):
+        """Export the results to a CSV file."""
+        with open('results.json', 'r') as file:
+            results = [json.loads(line) for line in file]
+        with open('results.csv', 'w', newline='') as csvfile:
+            fieldnames = ['timestamp', 'speed', 'ping']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            for result in results:
+                writer.writerow(result)
+        notify_user("Export Complete", "Results have been exported to results.csv")
 
     def schedule_test(self):
         """Schedule the speed test to run every hour."""
