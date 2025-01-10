@@ -38,7 +38,7 @@ This project is a simple GUI application to test your internet speed using Selen
 
 3. Run the application:
     ```bash
-    python main.py
+    python internet_speed_test.py
     ```
 
 ## Building the Executable

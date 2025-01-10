@@ -22,7 +22,6 @@ import time
 import requests
 import speedtest  # Correct import for speedtest
 
-
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -194,8 +193,8 @@ class SpeedTestApp:
         self.weather_label = ttk.Label(self.frame, font=("Helvetica", 12))
         self.weather_label.pack(pady=(0, 10))
 
-        dark_mode_button = ttk.Button(self.frame, text="Dark Mode", command=self.toggle_dark_mode)
-        dark_mode_button.pack(pady=(0, 10))
+        self.dark_mode_button = ttk.Button(self.frame, text="Dark Mode", command=self.toggle_dark_mode)
+        self.dark_mode_button.pack(pady=(0, 10))
 
         export_button = ttk.Button(self.frame, text="Export Results", command=self.export_results_to_csv)
         export_button.pack(pady=(0, 10))
@@ -225,11 +224,52 @@ class SpeedTestApp:
         self.update_weather()
 
     def toggle_dark_mode(self):
-        """Toggle between light and dark mode."""
-        self.style.theme_use('clam')
-        self.style.configure("TFrame", background="black")
-        self.style.configure("TLabel", background="black", foreground="white")
-        self.style.configure("TButton", background="black", foreground="white")
+        """Toggle between light and dark mode with improved styling."""
+        dark_bg = "#1E1E1E"  # Dark gray background
+        dark_fg = "#FFFFFF"  # White text
+        button_bg = "#333333"  # Slightly lighter gray for buttons
+        button_fg = "#E1E1E1"  # Light gray for button text
+        progress_bg = "#444444"  # Medium gray for progress bar
+
+        # Set dark theme for the whole window
+        self.root.configure(bg=dark_bg)
+        self.frame.configure(style="Dark.TFrame")
+
+        # Update style for all labels and buttons
+        self.style.configure("Dark.TLabel", background=dark_bg, foreground=dark_fg)
+        self.style.configure("Dark.TButton", background=button_bg, foreground=button_fg)
+        self.style.configure("TProgressbar", background=progress_bg)
+
+        # Apply new styles to existing widgets
+        self.title_label.configure(style="Dark.TLabel")
+        self.result_label.configure(style="Dark.TLabel")
+        self.weather_label.configure(style="Dark.TLabel")
+
+        for widget in self.frame.winfo_children():
+            if isinstance(widget, ttk.Button):
+                widget.configure(style="Dark.TButton")
+            elif isinstance(widget, ttk.Progressbar):
+                widget.configure(style="TProgressbar")
+
+        # Change button to Light Mode and remove duplicate
+        self.dark_mode_button.pack_forget()  # Remove existing button
+        self.dark_mode_button = ttk.Button(self.frame, text="Light Mode", command=self.toggle_light_mode)
+        self.dark_mode_button.pack(pady=(0, 10))
+
+    def toggle_light_mode(self):
+        """Revert back to light mode with default styling."""
+        self.style.theme_use('default')
+        self.root.configure(bg="white")
+
+        # Apply default styles
+        self.title_label.configure(style="TLabel")
+        self.result_label.configure(style="TLabel")
+        self.weather_label.configure(style="TLabel")
+
+        # Change button to Dark Mode and remove duplicate
+        self.dark_mode_button.pack_forget()  # Remove existing button
+        self.dark_mode_button = ttk.Button(self.frame, text="Dark Mode", command=self.toggle_dark_mode)
+        self.dark_mode_button.pack(pady=(0, 10))
 
     def fetch_weather(self, city=None, api_key='128080fedfe76dab7a2507e1de71bdcf'):
         """Fetch the current weather for a city."""
